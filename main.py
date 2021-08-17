@@ -1,8 +1,18 @@
 import re
-import requests
 import hashlib
+import requests as rq
+from tqdm import tqdm
+from urllib import request
+
 
 BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+
+
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
 
 
 def get_hash(path):
@@ -19,18 +29,15 @@ def get_hash(path):
 
 
 def download(url, file_name):
-    # open in binary mode
-    with open(file_name, "wb") as file:
-        # get request
-        response = requests.get(url)
-        # write to file
-        file.write(response.content)
+    with DownloadProgressBar(unit='B', unit_scale=True, miniters=1, desc=url.split('/')[-1]) as t:
+        request.urlretrieve(
+            url, filename=file_name, reporthook=t.update_to)
 
 
 page_link = "https://www.mongodb.com/try/download/shell"
 mgdb_regex = r"https:\/\/downloads\.mongodb\.com\/compass\/mongosh-\d\.\d\.\d-x64\.msi"
 
-html_page = requests.get(page_link).text
+html_page = rq.get(page_link).text
 matches = re.search(mgdb_regex, html_page, re.MULTILINE)
 mongo_link = matches.group()
 file_name = mongo_link.split('/')[-1]
