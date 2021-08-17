@@ -2,6 +2,8 @@ import re
 import hashlib
 import requests as rq
 from tqdm import tqdm
+from pathlib import Path
+from loguru import logger
 from urllib import request
 
 
@@ -34,6 +36,17 @@ def download(url, file_name):
             url, filename=file_name, reporthook=t.update_to)
 
 
+def check_version(file):
+    if Path(file).is_file():
+        logger.debug("No change in version")
+        return False
+    else:
+        logger.debug("File version changed")
+        for f in Path(".").glob("*.msi"):
+            f.unlink()
+        return True
+
+
 page_link = "https://www.mongodb.com/try/download/shell"
 mgdb_regex = r"https:\/\/downloads\.mongodb\.com\/compass\/mongosh-\d\.\d\.\d-x64\.msi"
 
@@ -42,5 +55,9 @@ matches = re.search(mgdb_regex, html_page, re.MULTILINE)
 mongo_link = matches.group()
 file_name = mongo_link.split('/')[-1]
 
-download(mongo_link, file_name)
+version_change = check_version(file_name)
+
+if version_change:
+    download(mongo_link, file_name)
+
 print(get_hash(file_name))
